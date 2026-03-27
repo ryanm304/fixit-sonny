@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRealtimeRequests } from '@/hooks/useRealtimeSubscription';
 import RequestCard from '@/components/RequestCard';
 import RequestFilters from '@/components/RequestFilters';
 import { motion } from 'framer-motion';
@@ -12,6 +13,8 @@ const RequestsList = () => {
   const [status, setStatus] = useState('all');
   const [category, setCategory] = useState('all');
   const [priority, setPriority] = useState('all');
+
+  useRealtimeRequests();
 
   const { data: requests = [] } = useQuery({
     queryKey: ['requests', user?.id],
@@ -40,7 +43,7 @@ const RequestsList = () => {
     <div>
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-heading font-bold mb-1">My Requests</h1>
-        <p className="text-muted-foreground text-sm mb-6">View and filter your maintenance requests</p>
+        <p className="text-muted-foreground text-sm mb-6">View and filter your maintenance requests — live updates enabled</p>
       </motion.div>
 
       <RequestFilters

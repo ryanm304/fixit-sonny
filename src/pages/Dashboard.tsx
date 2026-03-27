@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRealtimeRequests } from '@/hooks/useRealtimeSubscription';
 import StatCard from '@/components/StatCard';
 import RequestCard from '@/components/RequestCard';
 import { ClipboardList, Clock, Loader, CheckCircle2 } from 'lucide-react';
@@ -8,6 +9,7 @@ import { motion } from 'framer-motion';
 
 const Dashboard = () => {
   const { user, isAdmin } = useAuth();
+  useRealtimeRequests();
 
   const { data: requests = [] } = useQuery({
     queryKey: ['requests', user?.id, isAdmin],
@@ -29,14 +31,14 @@ const Dashboard = () => {
     completed: requests.filter((r) => r.status === 'completed').length,
   };
 
-  const recentRequests = requests.slice(0, 5);
+  const recentRequests = requests.slice(0, 6);
 
   return (
     <div>
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-heading font-bold mb-1">Dashboard</h1>
         <p className="text-muted-foreground text-sm mb-6">
-          {isAdmin ? 'Overview of all maintenance requests' : 'Your maintenance overview'}
+          {isAdmin ? 'Overview of all maintenance requests' : 'Your maintenance overview'} — updates in real time
         </p>
       </motion.div>
 

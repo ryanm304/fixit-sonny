@@ -13,7 +13,6 @@ import { Constants } from '@/integrations/supabase/types';
 import type { Database } from '@/integrations/supabase/types';
 
 const categories = Constants.public.Enums.request_category;
-const priorities = Constants.public.Enums.request_priority;
 
 const CreateRequestForm = () => {
   const { user } = useAuth();
@@ -22,7 +21,6 @@ const CreateRequestForm = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Database['public']['Enums']['request_category']>('other');
-  const [priority, setPriority] = useState<Database['public']['Enums']['request_priority']>('medium');
   const [location, setLocation] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,21 +28,31 @@ const CreateRequestForm = () => {
     if (!user) return;
     setLoading(true);
 
-    const { error } = await supabase.from('maintenance_requests').insert({
+    const { data, error } = await supabase.from('maintenance_requests').insert({
       user_id: user.id,
       title: title.trim(),
       description: description.trim() || null,
       category,
-      priority,
       location: location.trim() || null,
-    });
+    }).select().single();
 
     if (error) {
       toast.error('Failed to create request');
-    } else {
-      toast.success('Request submitted successfully!');
-      navigate('/dashboard/requests');
+      setLoading(false);
+      return;
     }
+
+    // Trigger AI prioritization in background
+    try {
+      await supabase.functions.invoke('ai-prioritize', {
+        body: { request_id: data.id },
+      });
+    } catch {
+      // Non-blocking - AI will run but we don't wait
+    }
+
+    toast.success('Request submitted! AI is analyzing priority...');
+    navigate('/dashboard/requests');
     setLoading(false);
   };
 
@@ -52,6 +60,7 @@ const CreateRequestForm = () => {
     <Card className="glass-card max-w-2xl">
       <CardHeader>
         <CardTitle className="font-heading text-xl">Submit Maintenance Request</CardTitle>
+        <p className="text-sm text-muted-foreground">AI will automatically analyze and assign priority</p>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -61,7 +70,7 @@ const CreateRequestForm = () => {
           </div>
           <div className="space-y-2">
             <Label htmlFor="desc">Description</Label>
-            <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide more details..." rows={4} maxLength={1000} />
+            <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Provide details — the more info, the better AI can prioritize..." rows={4} maxLength={1000} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -76,22 +85,11 @@ const CreateRequestForm = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Priority</Label>
-              <Select value={priority} onValueChange={(v) => setPriority(v as typeof priority)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {priorities.map((p) => (
-                    <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="location">Location</Label>
+              <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Building A, Room 204" maxLength={200} />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Building A, Room 204" maxLength={200} />
-          </div>
-          <Button type="submit" className="w-full gradient-accent font-semibold" disabled={loading}>
+          <Button type="submit" className="w-full gradient-accent font-semibold text-primary-foreground" disabled={loading}>
             {loading ? 'Submitting...' : 'Submit Request'}
           </Button>
         </form>
