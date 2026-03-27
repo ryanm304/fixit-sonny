@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import NotificationBell from '@/components/NotificationBell';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
@@ -19,15 +20,14 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Sidebar */}
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg gradient-accent flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-sidebar-primary-foreground" />
+              <Wrench className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-heading font-bold text-lg text-sidebar-accent-foreground">MaintainAI</h1>
+              <h1 className="font-heading font-bold text-lg text-sidebar-accent-foreground">FixIt Sonny</h1>
               <p className="text-xs text-sidebar-foreground/60">
                 {isAdmin ? 'Admin Panel' : 'Student Portal'}
               </p>
@@ -78,6 +78,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate text-sidebar-accent-foreground">{user?.email}</p>
             </div>
+            <NotificationBell />
           </div>
           <Button
             variant="ghost"
@@ -91,7 +92,6 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 ml-64 p-8">
         {children}
       </main>

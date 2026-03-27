@@ -1,7 +1,8 @@
 import { Tables } from '@/integrations/supabase/types';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { MapPin, Clock, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 
@@ -16,9 +17,23 @@ const statusColors: Record<string, string> = {
 
 const priorityColors: Record<string, string> = {
   low: 'bg-muted text-muted-foreground',
-  medium: 'bg-info/10 text-info',
-  high: 'bg-warning/10 text-warning',
+  medium: 'bg-warning/10 text-warning',
+  high: 'bg-[hsl(25,90%,50%)]/10 text-[hsl(25,90%,50%)]',
   urgent: 'bg-destructive/10 text-destructive',
+};
+
+const scoreColor = (score: number) => {
+  if (score >= 76) return 'text-destructive';
+  if (score >= 51) return 'text-[hsl(25,90%,50%)]';
+  if (score >= 26) return 'text-warning';
+  return 'text-muted-foreground';
+};
+
+const scoreBarColor = (score: number) => {
+  if (score >= 76) return '[&>div]:bg-destructive';
+  if (score >= 51) return '[&>div]:bg-[hsl(25,90%,50%)]';
+  if (score >= 26) return '[&>div]:bg-warning';
+  return '[&>div]:bg-muted-foreground';
 };
 
 const RequestCard = ({ request }: { request: Request }) => (
@@ -41,6 +56,21 @@ const RequestCard = ({ request }: { request: Request }) => (
           {request.priority}
         </Badge>
       </div>
+
+      {request.ai_score !== null && request.ai_score !== undefined && (
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Brain className="w-3 h-3" /> AI Score
+            </span>
+            <span className={cn('font-semibold', scoreColor(request.ai_score))}>
+              {request.ai_score}/100
+            </span>
+          </div>
+          <Progress value={request.ai_score} className={cn('h-1.5', scoreBarColor(request.ai_score))} />
+        </div>
+      )}
+
       <div className="flex items-center gap-4 text-xs text-muted-foreground pt-1">
         {request.location && (
           <span className="flex items-center gap-1">

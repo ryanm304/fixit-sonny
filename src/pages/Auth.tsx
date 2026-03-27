@@ -58,9 +58,9 @@ const Auth = () => {
             <div className="w-12 h-12 rounded-xl gradient-accent flex items-center justify-center">
               <Wrench className="w-6 h-6 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold font-heading text-primary-foreground">MaintainAI</h1>
+            <h1 className="text-3xl font-bold font-heading text-primary-foreground">FixIt Sonny</h1>
           </div>
-          <p className="text-muted-foreground">Smart maintenance management</p>
+          <p className="text-primary-foreground/60">Smart maintenance management</p>
         </div>
 
         <Card className="glass-card shadow-2xl border-border/30">
@@ -69,7 +69,7 @@ const Auth = () => {
               {isLogin ? 'Welcome back' : 'Create account'}
             </CardTitle>
             <CardDescription>
-              {isLogin ? 'Sign in to your account' : 'Get started with MaintainAI'}
+              {isLogin ? 'Sign in to your account' : 'Get started with FixIt Sonny'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -77,39 +77,18 @@ const Auth = () => {
               {!isLogin && (
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Your full name"
-                    required={!isLogin}
-                  />
+                  <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required={!isLogin} />
                 </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                />
+                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} />
               </div>
-              <Button type="submit" className="w-full gradient-accent font-semibold" disabled={loading}>
+              <Button type="submit" className="w-full gradient-accent font-semibold text-primary-foreground" disabled={loading}>
                 {loading ? 'Loading...' : (
                   <span className="flex items-center gap-2">
                     {isLogin ? 'Sign In' : 'Create Account'}
@@ -119,10 +98,7 @@ const Auth = () => {
               </Button>
             </form>
             <div className="mt-4 text-center">
-              <button
-                onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button onClick={() => setIsLogin(!isLogin)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
               </button>
             </div>
