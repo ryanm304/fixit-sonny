@@ -11,6 +11,7 @@ import NewRequest from "./pages/NewRequest";
 import RequestsList from "./pages/RequestsList";
 import ChatPage from "./pages/ChatPage";
 import AdminPanel from "./pages/AdminPanel";
+import ProfileSettings from "./pages/ProfileSettings";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
 
