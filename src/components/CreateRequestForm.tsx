@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Constants } from '@/integrations/supabase/types';
 import type { Database } from '@/integrations/supabase/types';
+import { Camera, X } from 'lucide-react';
 
 const categories = Constants.public.Enums.request_category;
 
@@ -22,11 +23,51 @@ const CreateRequestForm = () => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<Database['public']['Enums']['request_category']>('other');
   const [location, setLocation] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setLoading(true);
+
+    let imageUrl: string | null = null;
+
+    // Upload image if provided
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('request-photos')
+        .upload(filePath, imageFile);
+      if (uploadError) {
+        toast.error('Failed to upload image');
+        setLoading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage
+        .from('request-photos')
+        .getPublicUrl(filePath);
+      imageUrl = urlData.publicUrl;
+    }
 
     const { data, error } = await supabase.from('maintenance_requests').insert({
       user_id: user.id,
@@ -34,6 +75,7 @@ const CreateRequestForm = () => {
       description: description.trim() || null,
       category,
       location: location.trim() || null,
+      image_url: imageUrl,
     }).select().single();
 
     if (error) {
@@ -88,6 +130,38 @@ const CreateRequestForm = () => {
               <Label htmlFor="location">Location</Label>
               <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Building A, Room 204" maxLength={200} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Photo (optional)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Attach Photo
+              </Button>
+            )}
           </div>
           <Button type="submit" className="w-full gradient-accent font-semibold text-primary-foreground" disabled={loading}>
             {loading ? 'Submitting...' : 'Submit Request'}

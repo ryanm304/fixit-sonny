@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/NotificationBell';
@@ -11,6 +11,7 @@ const navItems = [
   { icon: PlusCircle, label: 'New Request', path: '/dashboard/new' },
   { icon: List, label: 'My Requests', path: '/dashboard/requests' },
   { icon: MessageCircle, label: 'AI Assistant', path: '/dashboard/chat' },
+  { icon: Settings, label: 'Profile', path: '/dashboard/profile' },
 ];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {

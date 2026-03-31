@@ -11,6 +11,7 @@ import NewRequest from "./pages/NewRequest";
 import RequestsList from "./pages/RequestsList";
 import ChatPage from "./pages/ChatPage";
 import AdminPanel from "./pages/AdminPanel";
+import ProfileSettings from "./pages/ProfileSettings";
 import DashboardLayout from "./components/DashboardLayout";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/dashboard/requests" element={<ProtectedRoute><RequestsList /></ProtectedRoute>} />
             <Route path="/dashboard/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
             <Route path="/dashboard/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+            <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
