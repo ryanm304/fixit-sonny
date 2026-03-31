@@ -65,8 +65,16 @@ const AdminPanel = () => {
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: Database['public']['Enums']['request_status'] }) => {
+      const request = requests.find(r => r.id === id);
       const { error } = await supabase.from('maintenance_requests').update({ status }).eq('id', id);
       if (error) throw error;
+      if (request) {
+        const { error: notifError } = await supabase.from('notifications').insert({
+          user_id: request.user_id,
+          message: `Your request "${request.title}" status changed to ${status.replace('_', ' ')}.`,
+        });
+        if (notifError) console.error('Notification insert failed:', notifError);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-requests'] });
