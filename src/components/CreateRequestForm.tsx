@@ -49,12 +49,33 @@ const CreateRequestForm = () => {
     if (!user) return;
     setLoading(true);
 
+    let imageUrl: string | null = null;
+
+    // Upload image if provided
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop();
+      const filePath = `${user.id}/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('request-photos')
+        .upload(filePath, imageFile);
+      if (uploadError) {
+        toast.error('Failed to upload image');
+        setLoading(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage
+        .from('request-photos')
+        .getPublicUrl(filePath);
+      imageUrl = urlData.publicUrl;
+    }
+
     const { data, error } = await supabase.from('maintenance_requests').insert({
       user_id: user.id,
       title: title.trim(),
       description: description.trim() || null,
       category,
       location: location.trim() || null,
+      image_url: imageUrl,
     }).select().single();
 
     if (error) {
