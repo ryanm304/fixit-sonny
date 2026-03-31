@@ -77,10 +77,25 @@ const Auth = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required={!isLogin} />
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name</Label>
+                    <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required={!isLogin} />
+                  </div>
+                  <div className="space-y-3">
+                    <Label>Account Type</Label>
+                    <RadioGroup value={role} onValueChange={(v) => setRole(v as 'user' | 'admin')} className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="user" id="role-student" />
+                        <Label htmlFor="role-student" className="cursor-pointer font-normal">Student</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="admin" id="role-admin" />
+                        <Label htmlFor="role-admin" className="cursor-pointer font-normal">Admin</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
