@@ -11,6 +11,7 @@ const navItems = [
   { icon: PlusCircle, label: 'New Request', path: '/dashboard/new' },
   { icon: List, label: 'My Requests', path: '/dashboard/requests' },
   { icon: MessageCircle, label: 'AI Assistant', path: '/dashboard/chat' },
+  { icon: Settings, label: 'Profile', path: '/dashboard/profile' },
 ];
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
