@@ -131,6 +131,38 @@ const CreateRequestForm = () => {
               <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Building A, Room 204" maxLength={200} />
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Photo (optional)</Label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageSelect}
+              className="hidden"
+            />
+            {imagePreview ? (
+              <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-border">
+                <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Camera className="w-4 h-4" />
+                Attach Photo
+              </Button>
+            )}
+          </div>
           <Button type="submit" className="w-full gradient-accent font-semibold text-primary-foreground" disabled={loading}>
             {loading ? 'Submitting...' : 'Submit Request'}
           </Button>

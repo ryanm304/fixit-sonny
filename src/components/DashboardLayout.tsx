@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/NotificationBell';
