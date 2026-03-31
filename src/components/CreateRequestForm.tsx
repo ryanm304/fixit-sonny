@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Constants } from '@/integrations/supabase/types';
 import type { Database } from '@/integrations/supabase/types';
+import { Camera, X } from 'lucide-react';
 
 const categories = Constants.public.Enums.request_category;
 
