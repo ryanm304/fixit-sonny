@@ -22,6 +22,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          image_url: string | null
           location: string | null
           priority: Database["public"]["Enums"]["request_priority"]
           status: Database["public"]["Enums"]["request_status"]
@@ -36,6 +37,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           location?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
@@ -50,6 +52,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          image_url?: string | null
           location?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
@@ -87,24 +90,30 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          dorm_hall: string | null
           full_name: string | null
           id: string
+          room_number: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          dorm_hall?: string | null
           full_name?: string | null
           id?: string
+          room_number?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          dorm_hall?: string | null
           full_name?: string | null
           id?: string
+          room_number?: string | null
           updated_at?: string
           user_id?: string
         }
