@@ -22,7 +22,6 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Fetch the request
     const { data: request, error: fetchError } = await supabase
       .from("maintenance_requests")
       .select("*")
@@ -39,7 +38,6 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Call AI to analyze the request
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -51,20 +49,57 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a maintenance request priority analyzer. Analyze the maintenance request and determine its priority and urgency score.
+            content: `You are a university campus maintenance request priority analyzer for Jackson State University (JSU). Analyze each maintenance request and determine its priority and urgency score based on realistic campus impact.
 
-Consider:
-- Safety risks (water leak, electrical issues, gas leak, fire hazard = HIGH/URGENT)
-- Impact on users (blocking access, no heating/cooling = HIGH)
-- Urgency signals in text (emergency, immediately, dangerous, broken)
-- Scope of impact (affects many people vs one person)
-- Category relevance
+PRIORITY GUIDELINES (be strict and accurate):
+
+URGENT (score 76-100) — Immediate danger or critical infrastructure failure:
+- Gas leaks, fire hazards, exposed electrical wiring, flooding
+- Elevator stuck with people inside
+- Complete loss of heating/cooling in extreme weather
+- Sewage backup, major water main break
+- Structural collapse risk, ceiling falling
+- Security system failure (locks broken on exterior doors)
+
+HIGH (score 51-75) — Significant impact on daily operations or safety concern:
+- Water leak causing damage (not just a drip)
+- No hot water in an entire dorm building
+- Broken windows exposing rooms to weather
+- HVAC failure affecting multiple rooms
+- Pest infestation (rats, roaches in large numbers)
+- Broken stairwell lighting, emergency exit blocked
+- Mold growth in living/working spaces
+
+MEDIUM (score 26-50) — Notable inconvenience but not immediately dangerous:
+- Single toilet/sink not working (others available)
+- Minor water drip or slow drain
+- One room's AC/heater not working (not extreme weather)
+- Flickering lights (not complete darkness)
+- Damaged furniture needing replacement
+- Minor wall/floor damage
+- Appliance malfunction (washer, dryer)
+
+LOW (score 0-25) — Cosmetic or minor convenience issues:
+- Paint chipping, scuff marks on walls
+- Squeaky doors, loose door handles
+- Light bulb replacement
+- Minor cleaning requests
+- Cosmetic damage that doesn't affect function
+- Request for additional amenities
+
+IMPORTANT RULES:
+- Consider how many people are affected (whole building vs one room)
+- Consider time sensitivity (weekend vs weekday, weather conditions)
+- Use the FULL range of scores, not just round numbers
+- A "broken toilet" in a shared bathroom is HIGH; in a room with another bathroom is MEDIUM
+- "Emergency" or "urgent" in the title alone does NOT make it urgent — evaluate the actual issue
+- Be precise: a clogged drain is MEDIUM, a sewage backup is URGENT
 
 You MUST respond using the provided tool.`,
           },
           {
             role: "user",
-            content: `Title: ${request.title}\nDescription: ${request.description || "No description"}\nCategory: ${request.category}\nLocation: ${request.location || "Not specified"}`,
+            content: `Title: ${request.title}\nDescription: ${request.description || "No description provided"}\nCategory: ${request.category}\nLocation: ${request.location || "Not specified"}`,
           },
         ],
         tools: [
@@ -79,15 +114,15 @@ You MUST respond using the provided tool.`,
                   priority: {
                     type: "string",
                     enum: ["low", "medium", "high", "urgent"],
-                    description: "The priority level",
+                    description: "The priority level based on safety, scope, and urgency",
                   },
                   ai_score: {
                     type: "integer",
-                    description: "Urgency score from 0-100. 0-25=low, 26-50=medium, 51-75=high, 76-100=urgent",
+                    description: "Urgency score from 0-100. Must align with priority: 0-25=low, 26-50=medium, 51-75=high, 76-100=urgent",
                   },
                   reasoning: {
                     type: "string",
-                    description: "Brief explanation for the priority assignment",
+                    description: "2-3 sentence explanation of why this priority was assigned, referencing specific factors",
                   },
                 },
                 required: ["priority", "ai_score", "reasoning"],
@@ -101,10 +136,20 @@ You MUST respond using the provided tool.`,
     });
 
     if (!aiResponse.ok) {
-      console.error("AI gateway error:", aiResponse.status, await aiResponse.text());
+      const errorText = await aiResponse.text();
+      console.error("AI gateway error:", aiResponse.status, errorText);
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded, please try again later." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (aiResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI credits exhausted." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "AI analysis failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -112,43 +157,32 @@ You MUST respond using the provided tool.`,
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
       return new Response(JSON.stringify({ error: "AI did not return priority" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const result = JSON.parse(toolCall.function.arguments);
     const clampedScore = Math.max(0, Math.min(100, result.ai_score));
 
-    // Update the request with AI results
     const { error: updateError } = await supabase
       .from("maintenance_requests")
-      .update({
-        priority: result.priority,
-        ai_score: clampedScore,
-      })
+      .update({ priority: result.priority, ai_score: clampedScore })
       .eq("id", request_id);
 
     if (updateError) {
       console.error("Update error:", updateError);
       return new Response(JSON.stringify({ error: "Failed to update request" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create notification for the user
     await supabase.from("notifications").insert({
       user_id: request.user_id,
-      message: `Your request "${request.title}" has been analyzed by AI: Priority set to ${result.priority.toUpperCase()} (score: ${clampedScore}/100).`,
+      message: `Your request "${request.title}" has been analyzed: Priority set to ${result.priority.toUpperCase()} (score: ${clampedScore}/100). ${result.reasoning}`,
     });
 
     return new Response(
-      JSON.stringify({
-        priority: result.priority,
-        ai_score: clampedScore,
-        reasoning: result.reasoning,
-      }),
+      JSON.stringify({ priority: result.priority, ai_score: clampedScore, reasoning: result.reasoning }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
