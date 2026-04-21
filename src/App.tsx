@@ -18,10 +18,11 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) => {
+  const { user, loading, isAdmin } = useAuth();
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading...</div>;
   if (!user) return <Navigate to="/auth" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
   return <DashboardLayout>{children}</DashboardLayout>;
 };
 
@@ -40,7 +41,7 @@ const App = () => (
             <Route path="/dashboard/new" element={<ProtectedRoute><NewRequest /></ProtectedRoute>} />
             <Route path="/dashboard/requests" element={<ProtectedRoute><RequestsList /></ProtectedRoute>} />
             <Route path="/dashboard/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-            <Route path="/dashboard/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+            <Route path="/dashboard/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
             <Route path="/dashboard/profile" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
