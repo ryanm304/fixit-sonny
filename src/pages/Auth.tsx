@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -16,7 +15,6 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'user' | 'admin'>('user');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -41,7 +39,7 @@ const Auth = () => {
           email,
           password,
           options: {
-            data: { full_name: fullName, role },
+            data: { full_name: fullName },
             emailRedirectTo: window.location.origin,
           },
         });
@@ -83,25 +81,10 @@ const Auth = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {mode === 'signup' && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required />
-                  </div>
-                  <div className="space-y-3">
-                    <Label>Account Type</Label>
-                    <RadioGroup value={role} onValueChange={(v) => setRole(v as 'user' | 'admin')} className="flex gap-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="user" id="role-student" />
-                        <Label htmlFor="role-student" className="cursor-pointer font-normal">Student</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="admin" id="role-admin" />
-                        <Label htmlFor="role-admin" className="cursor-pointer font-normal">Admin</Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Your full name" required />
+                </div>
               )}
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
