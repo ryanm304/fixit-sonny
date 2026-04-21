@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Wrench, Shield, Settings } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, List, MessageCircle, LogOut, Shield, Settings } from 'lucide-react';
+import jsuLogo from '@/assets/jsu-logo.png';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/NotificationBell';
@@ -24,9 +25,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex flex-col fixed h-full z-20">
         <div className="p-6 border-b border-sidebar-border">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg gradient-accent flex items-center justify-center">
-              <Wrench className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <img src={jsuLogo} alt="JSU Logo" width={40} height={40} className="w-10 h-10 object-contain" />
             <div>
               <h1 className="font-heading font-bold text-lg text-sidebar-accent-foreground">FixIt Sonny</h1>
               <p className="text-xs text-sidebar-foreground/60">
