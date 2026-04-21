@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, Brain } from 'lucide-react';
+import { ArrowUpDown, Brain, Search } from 'lucide-react';
 import { Constants } from '@/integrations/supabase/types';
 import type { Database } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
@@ -28,11 +29,22 @@ const priorityColors: Record<string, string> = {
   urgent: 'bg-destructive/10 text-destructive',
 };
 
+type Profile = {
+  user_id: string;
+  full_name: string | null;
+  dorm_hall: string | null;
+  room_number: string | null;
+};
+
 const AdminPanel = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const queryClient = useQueryClient();
   const [sortField, setSortField] = useState<SortField>('ai_score');
   const [sortAsc, setSortAsc] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
 
   useRealtimeRequests();
 
@@ -49,14 +61,80 @@ const AdminPanel = () => {
     enabled: isAdmin,
   });
 
-  const sorted = [...requests].sort((a, b) => {
-    let cmp = 0;
-    if (sortField === 'ai_score') cmp = (a.ai_score ?? 0) - (b.ai_score ?? 0);
-    else if (sortField === 'priority') cmp = (priorityOrder[a.priority] ?? 0) - (priorityOrder[b.priority] ?? 0);
-    else if (sortField === 'status') cmp = a.status.localeCompare(b.status);
-    else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    return sortAsc ? cmp : -cmp;
+  const { data: profiles = [] } = useQuery({
+    queryKey: ['admin-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, dorm_hall, room_number');
+      if (error) throw error;
+      return data as Profile[];
+    },
+    enabled: isAdmin,
   });
+
+  // Build a lookup of user_id -> email from auth metadata isn't available,
+  // so we use profiles + the requests' user_id. We'll also fetch user emails via a helper.
+  const { data: userEmails = {} } = useQuery({
+    queryKey: ['admin-user-emails', requests.map(r => r.user_id)],
+    queryFn: async () => {
+      // We can't query auth.users directly, so we'll use profiles for name/room matching
+      // For email matching we rely on a workaround: store nothing extra, just match other fields
+      return {} as Record<string, string>;
+    },
+    enabled: false, // disabled - we filter by profile fields instead
+  });
+
+  const profileMap = useMemo(() => {
+    const map: Record<string, Profile> = {};
+    profiles.forEach(p => { map[p.user_id] = p; });
+    return map;
+  }, [profiles]);
+
+  const filtered = useMemo(() => {
+    let result = [...requests];
+
+    // Filter by status
+    if (filterStatus !== 'all') {
+      result = result.filter(r => r.status === filterStatus);
+    }
+    // Filter by priority
+    if (filterPriority !== 'all') {
+      result = result.filter(r => r.priority === filterPriority);
+    }
+    // Filter by category
+    if (filterCategory !== 'all') {
+      result = result.filter(r => r.category === filterCategory);
+    }
+
+    // Search by title, description, student name, room number, dorm hall
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(r => {
+        const profile = profileMap[r.user_id];
+        return (
+          r.title.toLowerCase().includes(q) ||
+          (r.description?.toLowerCase().includes(q)) ||
+          (r.location?.toLowerCase().includes(q)) ||
+          (profile?.full_name?.toLowerCase().includes(q)) ||
+          (profile?.room_number?.toLowerCase().includes(q)) ||
+          (profile?.dorm_hall?.toLowerCase().includes(q))
+        );
+      });
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let cmp = 0;
+      if (sortField === 'ai_score') cmp = (a.ai_score ?? 0) - (b.ai_score ?? 0);
+      else if (sortField === 'priority') cmp = (priorityOrder[a.priority] ?? 0) - (priorityOrder[b.priority] ?? 0);
+      else if (sortField === 'status') cmp = a.status.localeCompare(b.status);
+      else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      return sortAsc ? cmp : -cmp;
+    });
+
+    return result;
+  }, [requests, filterStatus, filterPriority, filterCategory, searchQuery, sortField, sortAsc, profileMap]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -110,15 +188,57 @@ const AdminPanel = () => {
         <p className="text-muted-foreground text-sm mb-6">Manage all requests — real-time updates enabled</p>
       </motion.div>
 
+      {/* Search & Filters */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[220px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, room, dorm, title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {Constants.public.Enums.request_status.map((s) => (
+              <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterCategory} onValueChange={setFilterCategory}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {Constants.public.Enums.request_category.map((c) => (
+              <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterPriority} onValueChange={setFilterPriority}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Priority" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            {Constants.public.Enums.request_priority.map((p) => (
+              <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card className="glass-card">
         <CardHeader>
-          <CardTitle className="font-heading">All Requests ({requests.length})</CardTitle>
+          <CardTitle className="font-heading">All Requests ({filtered.length})</CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Title</TableHead>
+                <TableHead>Student</TableHead>
+                <TableHead>Room</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>
                   <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('priority')}>
@@ -141,59 +261,76 @@ const AdminPanel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium max-w-[200px] truncate">{r.title}</TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize">{r.category}</Badge></TableCell>
-                  <TableCell>
-                    <Badge className={cn('text-xs', priorityColors[r.priority])}>
-                      {r.priority}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {r.ai_score !== null && r.ai_score !== undefined ? (
-                      <div className="flex items-center gap-2 min-w-[80px]">
-                        <Progress value={r.ai_score} className="h-1.5 w-16" />
-                        <span className="text-xs font-mono font-semibold">{r.ai_score}</span>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell><Badge variant="outline" className="capitalize">{r.status.replace('_', ' ')}</Badge></TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{format(new Date(r.created_at), 'MMM d')}</TableCell>
-                  <TableCell>
-                    <Select
-                      value={r.status}
-                      onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v as Database['public']['Enums']['request_status'] })}
-                    >
-                      <SelectTrigger className="w-[130px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Constants.public.Enums.request_status.map((s) => (
-                          <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                  <TableCell>
-                    <Select
-                      value={r.priority}
-                      onValueChange={(v) => updatePriority.mutate({ id: r.id, priority: v as Database['public']['Enums']['request_priority'] })}
-                    >
-                      <SelectTrigger className="w-[110px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Constants.public.Enums.request_priority.map((p) => (
-                          <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              {filtered.map((r) => {
+                const profile = profileMap[r.user_id];
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium max-w-[200px] truncate">{r.title}</TableCell>
+                    <TableCell className="text-sm">
+                      <div>{profile?.full_name || '—'}</div>
+                      {profile?.dorm_hall && (
+                        <div className="text-xs text-muted-foreground">{profile.dorm_hall}</div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">{profile?.room_number || '—'}</TableCell>
+                    <TableCell><Badge variant="outline" className="capitalize">{r.category}</Badge></TableCell>
+                    <TableCell>
+                      <Badge className={cn('text-xs', priorityColors[r.priority])}>
+                        {r.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {r.ai_score !== null && r.ai_score !== undefined ? (
+                        <div className="flex items-center gap-2 min-w-[80px]">
+                          <Progress value={r.ai_score} className="h-1.5 w-16" />
+                          <span className="text-xs font-mono font-semibold">{r.ai_score}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell><Badge variant="outline" className="capitalize">{r.status.replace('_', ' ')}</Badge></TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{format(new Date(r.created_at), 'MMM d')}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={r.status}
+                        onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v as Database['public']['Enums']['request_status'] })}
+                      >
+                        <SelectTrigger className="w-[130px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Constants.public.Enums.request_status.map((s) => (
+                            <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                    <TableCell>
+                      <Select
+                        value={r.priority}
+                        onValueChange={(v) => updatePriority.mutate({ id: r.id, priority: v as Database['public']['Enums']['request_priority'] })}
+                      >
+                        <SelectTrigger className="w-[110px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Constants.public.Enums.request_priority.map((p) => (
+                            <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                    No requests match your filters.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
