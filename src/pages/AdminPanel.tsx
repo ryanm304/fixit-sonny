@@ -430,11 +430,35 @@ const AdminPanel = () => {
               </CardTitle>
               <p className="text-sm text-muted-foreground">Promote students to admin or revoke admin access.</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* User Search & Filters */}
+              <div className="flex flex-wrap gap-3">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, dorm, room, or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={userRoleFilter} onValueChange={(v) => setUserRoleFilter(v as 'all' | 'admin' | 'student')}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="admin">Admins Only</SelectItem>
+                    <SelectItem value="student">Students Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Dorm Hall</TableHead>
                     <TableHead>Room</TableHead>
                     <TableHead>Role</TableHead>
@@ -442,12 +466,14 @@ const AdminPanel = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profiles.map((profile) => {
+                  {filteredUsers.map((profile) => {
                     const isCurrentUser = profile.user_id === user?.id;
                     const isProfileAdmin = adminUserIds.has(profile.user_id);
+                    const email = emailMap[profile.user_id];
                     return (
                       <TableRow key={profile.user_id}>
                         <TableCell className="font-medium">{profile.full_name || '—'}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{email || '—'}</TableCell>
                         <TableCell className="text-sm">{profile.dorm_hall || '—'}</TableCell>
                         <TableCell className="text-sm">{profile.room_number || '—'}</TableCell>
                         <TableCell>
@@ -481,10 +507,10 @@ const AdminPanel = () => {
                       </TableRow>
                     );
                   })}
-                  {profiles.length === 0 && (
+                  {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No users found.
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        {userSearchQuery || userRoleFilter !== 'all' ? 'No users match your filters.' : 'No users found.'}
                       </TableCell>
                     </TableRow>
                   )}
