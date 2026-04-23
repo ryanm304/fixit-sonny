@@ -216,154 +216,234 @@ const AdminPanel = () => {
         <p className="text-muted-foreground text-sm mb-6">Manage all requests — real-time updates enabled</p>
       </motion.div>
 
-      {/* Search & Filters */}
-      <div className="flex flex-wrap gap-3 mb-6">
-        <div className="relative flex-1 min-w-[220px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, room, dorm, title..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            {Constants.public.Enums.request_status.map((s) => (
-              <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterCategory} onValueChange={setFilterCategory}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Category" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {Constants.public.Enums.request_category.map((c) => (
-              <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterPriority} onValueChange={setFilterPriority}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Priority" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priorities</SelectItem>
-            {Constants.public.Enums.request_priority.map((p) => (
-              <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="requests" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="requests">Maintenance Requests</TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" /> User Management</TabsTrigger>
+        </TabsList>
 
-      <Card className="glass-card">
-        <CardHeader>
-          <CardTitle className="font-heading">All Requests ({filtered.length})</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Student</TableHead>
-                <TableHead>Room</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('priority')}>
-                    Priority <ArrowUpDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('ai_score')}>
-                    <Brain className="w-3 h-3 mr-1" /> AI Score <ArrowUpDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </TableHead>
-                <TableHead>
-                  <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('status')}>
-                    Status <ArrowUpDown className="w-3 h-3 ml-1" />
-                  </Button>
-                </TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Update Status</TableHead>
-                <TableHead>Override Priority</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => {
-                const profile = profileMap[r.user_id];
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium max-w-[200px] truncate">{r.title}</TableCell>
-                    <TableCell className="text-sm">
-                      <div>{profile?.full_name || '—'}</div>
-                      {profile?.dorm_hall && (
-                        <div className="text-xs text-muted-foreground">{profile.dorm_hall}</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">{profile?.room_number || '—'}</TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{r.category}</Badge></TableCell>
-                    <TableCell>
-                      <Badge className={cn('text-xs', priorityColors[r.priority])}>
-                        {r.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {r.ai_score !== null && r.ai_score !== undefined ? (
-                        <div className="flex items-center gap-2 min-w-[80px]">
-                          <Progress value={r.ai_score} className="h-1.5 w-16" />
-                          <span className="text-xs font-mono font-semibold">{r.ai_score}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell><Badge variant="outline" className="capitalize">{r.status.replace('_', ' ')}</Badge></TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{format(new Date(r.created_at), 'MMM d')}</TableCell>
-                    <TableCell>
-                      <Select
-                        value={r.status}
-                        onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v as Database['public']['Enums']['request_status'] })}
-                      >
-                        <SelectTrigger className="w-[130px] h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Constants.public.Enums.request_status.map((s) => (
-                            <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={r.priority}
-                        onValueChange={(v) => updatePriority.mutate({ id: r.id, priority: v as Database['public']['Enums']['request_priority'] })}
-                      >
-                        <SelectTrigger className="w-[110px] h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Constants.public.Enums.request_priority.map((p) => (
-                            <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
+        <TabsContent value="requests">
+          {/* Search & Filters */}
+          <div className="flex flex-wrap gap-3 mb-6">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name, room, dorm, title..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                {Constants.public.Enums.request_status.map((s) => (
+                  <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Category" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {Constants.public.Enums.request_category.map((c) => (
+                  <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterPriority} onValueChange={setFilterPriority}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Priority" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                {Constants.public.Enums.request_priority.map((p) => (
+                  <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="font-heading">All Requests ({filtered.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('priority')}>
+                        Priority <ArrowUpDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('ai_score')}>
+                        <Brain className="w-3 h-3 mr-1" /> AI Score <ArrowUpDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>
+                      <Button variant="ghost" size="sm" className="p-0 h-auto font-medium" onClick={() => toggleSort('status')}>
+                        Status <ArrowUpDown className="w-3 h-3 ml-1" />
+                      </Button>
+                    </TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Update Status</TableHead>
+                    <TableHead>Override Priority</TableHead>
                   </TableRow>
-                );
-              })}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
-                    No requests match your filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => {
+                    const profile = profileMap[r.user_id];
+                    return (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium max-w-[200px] truncate">{r.title}</TableCell>
+                        <TableCell className="text-sm">
+                          <div>{profile?.full_name || '—'}</div>
+                          {profile?.dorm_hall && (
+                            <div className="text-xs text-muted-foreground">{profile.dorm_hall}</div>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm">{profile?.room_number || '—'}</TableCell>
+                        <TableCell><Badge variant="outline" className="capitalize">{r.category}</Badge></TableCell>
+                        <TableCell>
+                          <Badge className={cn('text-xs', priorityColors[r.priority])}>
+                            {r.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {r.ai_score !== null && r.ai_score !== undefined ? (
+                            <div className="flex items-center gap-2 min-w-[80px]">
+                              <Progress value={r.ai_score} className="h-1.5 w-16" />
+                              <span className="text-xs font-mono font-semibold">{r.ai_score}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell><Badge variant="outline" className="capitalize">{r.status.replace('_', ' ')}</Badge></TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{format(new Date(r.created_at), 'MMM d')}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={r.status}
+                            onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v as Database['public']['Enums']['request_status'] })}
+                          >
+                            <SelectTrigger className="w-[130px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Constants.public.Enums.request_status.map((s) => (
+                                <SelectItem key={s} value={s} className="capitalize">{s.replace('_', ' ')}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={r.priority}
+                            onValueChange={(v) => updatePriority.mutate({ id: r.id, priority: v as Database['public']['Enums']['request_priority'] })}
+                          >
+                            <SelectTrigger className="w-[110px] h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Constants.public.Enums.request_priority.map((p) => (
+                                <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filtered.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                        No requests match your filters.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="users">
+          <Card className="glass-card">
+            <CardHeader>
+              <CardTitle className="font-heading flex items-center gap-2">
+                <Users className="w-5 h-5" /> User Management
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">Promote students to admin or revoke admin access.</p>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Dorm Hall</TableHead>
+                    <TableHead>Room</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {profiles.map((profile) => {
+                    const isCurrentUser = profile.user_id === user?.id;
+                    const isProfileAdmin = adminUserIds.has(profile.user_id);
+                    return (
+                      <TableRow key={profile.user_id}>
+                        <TableCell className="font-medium">{profile.full_name || '—'}</TableCell>
+                        <TableCell className="text-sm">{profile.dorm_hall || '—'}</TableCell>
+                        <TableCell className="text-sm">{profile.room_number || '—'}</TableCell>
+                        <TableCell>
+                          <Badge variant={isProfileAdmin ? 'default' : 'outline'} className={isProfileAdmin ? 'bg-primary' : ''}>
+                            {isProfileAdmin ? 'Admin' : 'Student'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {isCurrentUser ? (
+                            <span className="text-xs text-muted-foreground">Current user</span>
+                          ) : isProfileAdmin ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => demoteFromAdmin.mutate(profile.user_id)}
+                              className="gap-1.5 text-destructive hover:text-destructive"
+                            >
+                              <ShieldOff className="w-3.5 h-3.5" /> Remove Admin
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => promoteToAdmin.mutate(profile.user_id)}
+                              className="gap-1.5"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" /> Make Admin
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {profiles.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        No users found.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
   );
 };
 
