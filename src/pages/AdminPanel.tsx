@@ -78,6 +78,17 @@ const AdminPanel = () => {
     enabled: isAdmin,
   });
 
+  // Fetch user emails
+  const { data: userEmails = [] } = useQuery({
+    queryKey: ['admin-user-emails'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_user_emails');
+      if (error) throw error;
+      return data as { user_id: string; email: string }[];
+    },
+    enabled: isAdmin,
+  });
+
   // Fetch all user roles for user management tab
   const { data: allRoles = [] } = useQuery({
     queryKey: ['admin-all-roles'],
