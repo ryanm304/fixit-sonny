@@ -74,16 +74,43 @@ const AdminPanel = () => {
     enabled: isAdmin,
   });
 
-  // Build a lookup of user_id -> email from auth metadata isn't available,
-  // so we use profiles + the requests' user_id. We'll also fetch user emails via a helper.
-  const { data: userEmails = {} } = useQuery({
-    queryKey: ['admin-user-emails', requests.map(r => r.user_id)],
+  // Fetch all user roles for user management tab
+  const { data: allRoles = [] } = useQuery({
+    queryKey: ['admin-all-roles'],
     queryFn: async () => {
-      // We can't query auth.users directly, so we'll use profiles for name/room matching
-      // For email matching we rely on a workaround: store nothing extra, just match other fields
-      return {} as Record<string, string>;
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('*');
+      if (error) throw error;
+      return data;
     },
-    enabled: false, // disabled - we filter by profile fields instead
+    enabled: isAdmin,
+  });
+
+  const adminUserIds = useMemo(() => new Set(allRoles.filter(r => r.role === 'admin').map(r => r.user_id)), [allRoles]);
+
+  const promoteToAdmin = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from('user_roles').insert({ user_id: userId, role: 'admin' as Database['public']['Enums']['app_role'] });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-all-roles'] });
+      toast.success('User promoted to admin');
+    },
+    onError: () => toast.error('Failed to promote user'),
+  });
+
+  const demoteFromAdmin = useMutation({
+    mutationFn: async (userId: string) => {
+      const { error } = await supabase.from('user_roles').delete().eq('user_id', userId).eq('role', 'admin');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-all-roles'] });
+      toast.success('Admin role removed');
+    },
+    onError: () => toast.error('Failed to demote user'),
   });
 
   const profileMap = useMemo(() => {
