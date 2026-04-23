@@ -444,6 +444,7 @@ const AdminPanel = () => {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
   );
 };
 
