@@ -46,6 +46,10 @@ const AdminPanel = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  
+  // User management filters
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'admin' | 'student'>('all');
 
   useRealtimeRequests();
 
@@ -70,6 +74,17 @@ const AdminPanel = () => {
         .select('user_id, full_name, dorm_hall, room_number');
       if (error) throw error;
       return data as Profile[];
+    },
+    enabled: isAdmin,
+  });
+
+  // Fetch user emails
+  const { data: userEmails = [] } = useQuery({
+    queryKey: ['admin-user-emails'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_user_emails');
+      if (error) throw error;
+      return data as { user_id: string; email: string }[];
     },
     enabled: isAdmin,
   });
@@ -119,6 +134,12 @@ const AdminPanel = () => {
     return map;
   }, [profiles]);
 
+  const emailMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    userEmails.forEach(u => { map[u.user_id] = u.email; });
+    return map;
+  }, [userEmails]);
+
   const filtered = useMemo(() => {
     let result = [...requests];
 
@@ -163,6 +184,35 @@ const AdminPanel = () => {
 
     return result;
   }, [requests, filterStatus, filterPriority, filterCategory, searchQuery, sortField, sortAsc, profileMap]);
+
+  // Filter users based on search and role filter
+  const filteredUsers = useMemo(() => {
+    let result = [...profiles];
+    
+    // Filter by role
+    if (userRoleFilter !== 'all') {
+      result = result.filter(p => {
+        const isAdmin = adminUserIds.has(p.user_id);
+        return userRoleFilter === 'admin' ? isAdmin : !isAdmin;
+      });
+    }
+    
+    // Search by name, dorm, room, or email
+    if (userSearchQuery.trim()) {
+      const q = userSearchQuery.toLowerCase();
+      result = result.filter(p => {
+        const email = emailMap[p.user_id];
+        return (
+          (p.full_name?.toLowerCase().includes(q)) ||
+          (p.dorm_hall?.toLowerCase().includes(q)) ||
+          (p.room_number?.toLowerCase().includes(q)) ||
+          (email?.toLowerCase().includes(q))
+        );
+      });
+    }
+    
+    return result;
+  }, [profiles, userRoleFilter, userSearchQuery, adminUserIds, emailMap]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortAsc(!sortAsc);
@@ -380,11 +430,35 @@ const AdminPanel = () => {
               </CardTitle>
               <p className="text-sm text-muted-foreground">Promote students to admin or revoke admin access.</p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* User Search & Filters */}
+              <div className="flex flex-wrap gap-3">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, dorm, room, or email..."
+                    value={userSearchQuery}
+                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={userRoleFilter} onValueChange={(v) => setUserRoleFilter(v as 'all' | 'admin' | 'student')}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Filter by role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Users</SelectItem>
+                    <SelectItem value="admin">Admins Only</SelectItem>
+                    <SelectItem value="student">Students Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Dorm Hall</TableHead>
                     <TableHead>Room</TableHead>
                     <TableHead>Role</TableHead>
@@ -392,12 +466,14 @@ const AdminPanel = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {profiles.map((profile) => {
+                  {filteredUsers.map((profile) => {
                     const isCurrentUser = profile.user_id === user?.id;
                     const isProfileAdmin = adminUserIds.has(profile.user_id);
+                    const email = emailMap[profile.user_id];
                     return (
                       <TableRow key={profile.user_id}>
                         <TableCell className="font-medium">{profile.full_name || '—'}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{email || '—'}</TableCell>
                         <TableCell className="text-sm">{profile.dorm_hall || '—'}</TableCell>
                         <TableCell className="text-sm">{profile.room_number || '—'}</TableCell>
                         <TableCell>
@@ -431,10 +507,10 @@ const AdminPanel = () => {
                       </TableRow>
                     );
                   })}
-                  {profiles.length === 0 && (
+                  {filteredUsers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No users found.
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        {userSearchQuery || userRoleFilter !== 'all' ? 'No users match your filters.' : 'No users found.'}
                       </TableCell>
                     </TableRow>
                   )}
