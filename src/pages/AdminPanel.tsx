@@ -134,6 +134,12 @@ const AdminPanel = () => {
     return map;
   }, [profiles]);
 
+  const emailMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    userEmails.forEach(u => { map[u.user_id] = u.email; });
+    return map;
+  }, [userEmails]);
+
   const filtered = useMemo(() => {
     let result = [...requests];
 
@@ -178,6 +184,35 @@ const AdminPanel = () => {
 
     return result;
   }, [requests, filterStatus, filterPriority, filterCategory, searchQuery, sortField, sortAsc, profileMap]);
+
+  // Filter users based on search and role filter
+  const filteredUsers = useMemo(() => {
+    let result = [...profiles];
+    
+    // Filter by role
+    if (userRoleFilter !== 'all') {
+      result = result.filter(p => {
+        const isAdmin = adminUserIds.has(p.user_id);
+        return userRoleFilter === 'admin' ? isAdmin : !isAdmin;
+      });
+    }
+    
+    // Search by name, dorm, room, or email
+    if (userSearchQuery.trim()) {
+      const q = userSearchQuery.toLowerCase();
+      result = result.filter(p => {
+        const email = emailMap[p.user_id];
+        return (
+          (p.full_name?.toLowerCase().includes(q)) ||
+          (p.dorm_hall?.toLowerCase().includes(q)) ||
+          (p.room_number?.toLowerCase().includes(q)) ||
+          (email?.toLowerCase().includes(q))
+        );
+      });
+    }
+    
+    return result;
+  }, [profiles, userRoleFilter, userSearchQuery, adminUserIds, emailMap]);
 
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortAsc(!sortAsc);
